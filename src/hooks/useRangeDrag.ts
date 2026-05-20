@@ -6,6 +6,7 @@ export function useRangeDrag(
 ): { isDragging: boolean; onMouseDown: (e: React.MouseEvent) => void } {
   const [isDragging, setIsDragging] = useState(false)
 
+  // trackRef identity is stable (React never replaces the ref object), so it is omitted from deps
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!trackRef.current) return
@@ -13,9 +14,10 @@ export function useRangeDrag(
       const raw = (e.clientX - rect.left) / rect.width
       onDrag(Math.max(0, Math.min(1, raw)))
     },
-    [trackRef, onDrag]
+    [onDrag] // eslint-disable-line react-hooks/exhaustive-deps
   )
 
+  // setIsDragging is stable across renders, so empty deps array is intentional and safe
   const handleMouseUp = useCallback(() => setIsDragging(false), [])
 
   useEffect(() => {
