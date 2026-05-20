@@ -9,7 +9,7 @@ async function prepare() {
   }
 }
 
-prepare().then(() => {
+prepare().catch(console.error).then(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <App />
