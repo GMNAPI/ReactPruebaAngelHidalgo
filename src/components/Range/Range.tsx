@@ -141,7 +141,67 @@ interface FixedRangeInternalProps extends FixedRangeProps {
   trackRef: React.RefObject<HTMLDivElement>
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function FixedRange({ values, trackRef }: FixedRangeInternalProps) {
-  return <div ref={trackRef}>Fixed range — Task 5</div>
+  const [minIndex, setMinIndex] = useState(0)
+  const [maxIndex, setMaxIndex] = useState(values.length - 1)
+
+  const toPercent = (index: number) => (index / (values.length - 1)) * 100
+  const snapIndex = (pct: number) => Math.round(pct * (values.length - 1))
+
+  const handleMinDrag = useCallback(
+    (pct: number) => {
+      const idx = Math.max(0, Math.min(snapIndex(pct), maxIndex - 1))
+      setMinIndex(idx)
+    },
+    [maxIndex, values.length] // eslint-disable-line react-hooks/exhaustive-deps
+  )
+
+  const handleMaxDrag = useCallback(
+    (pct: number) => {
+      const idx = Math.max(minIndex + 1, Math.min(snapIndex(pct), values.length - 1))
+      setMaxIndex(idx)
+    },
+    [minIndex, values.length] // eslint-disable-line react-hooks/exhaustive-deps
+  )
+
+  const { isDragging: minDragging, onMouseDown: minMouseDown } = useRangeDrag(trackRef, handleMinDrag)
+  const { isDragging: maxDragging, onMouseDown: maxMouseDown } = useRangeDrag(trackRef, handleMaxDrag)
+
+  return (
+    <div className={styles.wrapper}>
+      <span className={styles.labelText}>{values[minIndex].toFixed(2)}€</span>
+
+      <div ref={trackRef} className={styles.trackOuter}>
+        <div
+          className={styles.trackFill}
+          style={{
+            left: `${toPercent(minIndex)}%`,
+            right: `${100 - toPercent(maxIndex)}%`,
+          }}
+        />
+        <div
+          role="slider"
+          aria-label="min bullet"
+          aria-valuenow={values[minIndex]}
+          aria-valuemin={values[0]}
+          aria-valuemax={values[values.length - 1]}
+          className={`${styles.bullet} ${minDragging ? styles.bulletDragging : ''}`}
+          style={{ left: `${toPercent(minIndex)}%` }}
+          onMouseDown={minMouseDown}
+        />
+        <div
+          role="slider"
+          aria-label="max bullet"
+          aria-valuenow={values[maxIndex]}
+          aria-valuemin={values[0]}
+          aria-valuemax={values[values.length - 1]}
+          className={`${styles.bullet} ${maxDragging ? styles.bulletDragging : ''}`}
+          style={{ left: `${toPercent(maxIndex)}%` }}
+          onMouseDown={maxMouseDown}
+        />
+      </div>
+
+      <span className={styles.labelText}>{values[maxIndex].toFixed(2)}€</span>
+    </div>
+  )
 }
