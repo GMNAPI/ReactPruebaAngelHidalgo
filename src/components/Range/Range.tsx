@@ -1,0 +1,147 @@
+import { useCallback, useRef, useState } from 'react'
+import { useRangeDrag } from '../../hooks/useRangeDrag'
+import styles from './Range.module.css'
+
+interface NormalRangeProps {
+  mode: 'normal'
+  min: number
+  max: number
+}
+
+interface FixedRangeProps {
+  mode: 'fixed'
+  values: number[]
+}
+
+type RangeProps = NormalRangeProps | FixedRangeProps
+
+export function Range(props: RangeProps) {
+  const trackRef = useRef<HTMLDivElement>(null)
+
+  if (props.mode === 'normal') {
+    return <NormalRange {...props} trackRef={trackRef} />
+  }
+  return <FixedRange {...props} trackRef={trackRef} />
+}
+
+// ─── Normal Mode ─────────────────────────────────────────────────────────────
+
+interface NormalRangeInternalProps extends NormalRangeProps {
+  trackRef: React.RefObject<HTMLDivElement>
+}
+
+function NormalRange({ min, max, trackRef }: NormalRangeInternalProps) {
+  const [minVal, setMinVal] = useState(min)
+  const [maxVal, setMaxVal] = useState(max)
+  const [minInput, setMinInput] = useState(String(min))
+  const [maxInput, setMaxInput] = useState(String(max))
+
+  const toPercent = (v: number) => ((v - min) / (max - min)) * 100
+
+  const handleMinDrag = useCallback(
+    (pct: number) => {
+      const raw = min + pct * (max - min)
+      const clamped = Math.max(min, Math.min(raw, maxVal - 1))
+      const rounded = Math.round(clamped)
+      setMinVal(rounded)
+      setMinInput(String(rounded))
+    },
+    [min, max, maxVal]
+  )
+
+  const handleMaxDrag = useCallback(
+    (pct: number) => {
+      const raw = min + pct * (max - min)
+      const clamped = Math.max(minVal + 1, Math.min(raw, max))
+      const rounded = Math.round(clamped)
+      setMaxVal(rounded)
+      setMaxInput(String(rounded))
+    },
+    [min, max, minVal]
+  )
+
+  const { isDragging: minDragging, onMouseDown: minMouseDown } = useRangeDrag(trackRef, handleMinDrag)
+  const { isDragging: maxDragging, onMouseDown: maxMouseDown } = useRangeDrag(trackRef, handleMaxDrag)
+
+  function commitMin() {
+    const parsed = parseFloat(minInput)
+    if (isNaN(parsed)) { setMinInput(String(minVal)); return }
+    const clamped = Math.max(min, Math.min(parsed, maxVal - 1))
+    setMinVal(clamped)
+    setMinInput(String(clamped))
+  }
+
+  function commitMax() {
+    const parsed = parseFloat(maxInput)
+    if (isNaN(parsed)) { setMaxInput(String(maxVal)); return }
+    const clamped = Math.max(minVal + 1, Math.min(parsed, max))
+    setMaxVal(clamped)
+    setMaxInput(String(clamped))
+  }
+
+  return (
+    <div className={styles.wrapper}>
+      <div className={styles.label}>
+        <input
+          className={styles.labelInput}
+          value={minInput}
+          onChange={e => setMinInput(e.target.value)}
+          onBlur={commitMin}
+          onKeyDown={e => e.key === 'Enter' && commitMin()}
+          aria-label="minimum value"
+        />
+        €
+      </div>
+
+      <div ref={trackRef} className={styles.trackOuter}>
+        <div
+          className={styles.trackFill}
+          style={{ left: `${toPercent(minVal)}%`, right: `${100 - toPercent(maxVal)}%` }}
+        />
+        <div
+          role="slider"
+          aria-label="min bullet"
+          aria-valuenow={minVal}
+          aria-valuemin={min}
+          aria-valuemax={max}
+          className={`${styles.bullet} ${minDragging ? styles.bulletDragging : ''}`}
+          style={{ left: `${toPercent(minVal)}%` }}
+          onMouseDown={minMouseDown}
+        />
+        <div
+          role="slider"
+          aria-label="max bullet"
+          aria-valuenow={maxVal}
+          aria-valuemin={min}
+          aria-valuemax={max}
+          className={`${styles.bullet} ${maxDragging ? styles.bulletDragging : ''}`}
+          style={{ left: `${toPercent(maxVal)}%` }}
+          onMouseDown={maxMouseDown}
+        />
+      </div>
+
+      <div className={styles.label}>
+        <input
+          className={styles.labelInput}
+          value={maxInput}
+          onChange={e => setMaxInput(e.target.value)}
+          onBlur={commitMax}
+          onKeyDown={e => e.key === 'Enter' && commitMax()}
+          aria-label="maximum value"
+        />
+        €
+      </div>
+    </div>
+  )
+}
+
+// ─── Fixed Mode (stub — implemented in Task 5) ───────────────────────────────
+
+interface FixedRangeInternalProps extends FixedRangeProps {
+  trackRef: React.RefObject<HTMLDivElement>
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function FixedRange({ values, trackRef }: FixedRangeInternalProps) {
+  return <div ref={trackRef}>Fixed range — Task 5</div>
+}
