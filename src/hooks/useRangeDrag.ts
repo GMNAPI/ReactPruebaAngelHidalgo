@@ -20,7 +20,7 @@ export function useRangeDrag(
     const rect = trackRef.current.getBoundingClientRect()
     const raw = (clientX - rect.left) / rect.width
     onDragRef.current(Math.max(0, Math.min(1, raw)))
-  }, []) // stable — reads onDragRef.current at call time; trackRef identity is also stable
+  }, [trackRef])
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => calcPercent(e.clientX),
