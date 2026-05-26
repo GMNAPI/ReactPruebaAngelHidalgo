@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export function useRangeDrag(
   trackRef: React.RefObject<HTMLElement>,
@@ -10,15 +10,17 @@ export function useRangeDrag(
 } {
   const [isDragging, setIsDragging] = useState(false)
 
-  const calcPercent = useCallback(
-    (clientX: number) => {
-      if (!trackRef.current) return
-      const rect = trackRef.current.getBoundingClientRect()
-      const raw = (clientX - rect.left) / rect.width
-      onDrag(Math.max(0, Math.min(1, raw)))
-    },
-    [onDrag] // eslint-disable-line react-hooks/exhaustive-deps
-  )
+  // Keep latest onDrag in a ref so listeners never need to be re-registered
+  // when the callback identity changes between renders (e.g. on every drag frame)
+  const onDragRef = useRef(onDrag)
+  useEffect(() => { onDragRef.current = onDrag })
+
+  const calcPercent = useCallback((clientX: number) => {
+    if (!trackRef.current) return
+    const rect = trackRef.current.getBoundingClientRect()
+    const raw = (clientX - rect.left) / rect.width
+    onDragRef.current(Math.max(0, Math.min(1, raw)))
+  }, []) // stable — reads onDragRef.current at call time; trackRef identity is also stable
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => calcPercent(e.clientX),
@@ -28,6 +30,7 @@ export function useRangeDrag(
   const handleTouchMove = useCallback(
     (e: TouchEvent) => {
       if (!e.touches.length) return
+      e.preventDefault() // must be called from a non-passive listener
       calcPercent(e.touches[0].clientX)
     },
     [calcPercent]
@@ -41,7 +44,7 @@ export function useRangeDrag(
     if (!isDragging) return
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
-    document.addEventListener('touchmove', handleTouchMove)
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
     document.addEventListener('touchend', handleTouchEnd)
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
