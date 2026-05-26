@@ -7,14 +7,19 @@ export interface FixedRangeResponse {
   rangeValues: number[]
 }
 
+async function parseJson<T>(res: Response): Promise<T> {
+  if (!res.ok) throw new Error(`Server error: ${res.status}`)
+  try {
+    return await res.json()
+  } catch {
+    throw new Error('Invalid response from server')
+  }
+}
+
 export async function fetchNormalRange(): Promise<NormalRangeResponse> {
-  const res = await fetch('/api/range')
-  if (!res.ok) throw new Error(`Failed to fetch range: ${res.status}`)
-  return res.json()
+  return parseJson(await fetch('/api/range'))
 }
 
 export async function fetchFixedRange(): Promise<FixedRangeResponse> {
-  const res = await fetch('/api/range-fixed')
-  if (!res.ok) throw new Error(`Failed to fetch fixed range: ${res.status}`)
-  return res.json()
+  return parseJson(await fetch('/api/range-fixed'))
 }
